@@ -16,6 +16,18 @@ def check_and_install_dependencies():
         print("Please run with: sudo python3 install_canvas.py")
         sys.exit(1)
     
+    # Configure Git globally to prevent ownership issues
+    try:
+        print("Configuring Git for installation...")
+        subprocess.run(["git", "config", "--global", "--add", "safe.directory", "*"],
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["git", "config", "--global", "user.name", "Canvas Installer"],
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["git", "config", "--global", "user.email", "installer@canvas.local"],
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except:
+        pass  # Git config is not critical for dependency installation
+    
     # Try to import rich
     try:
         import rich

@@ -30,18 +30,42 @@ class CloneCanvasStep(BaseStep):
                 
                 task = progress.add_task("Cloning Canvas LMS...", total=None)
                 
-                # Navigate to /var directory and clone Canvas
-                progress.update(task, description="Cloning Canvas repository...")
-                commands = [
-                    "cd /var",
-                    "sudo git clone https://github.com/instructure/canvas-lms.git canvas",
-                    f"sudo chown -R canvas:canvas /var/canvas",
-                    "cd /var/canvas",
-                    "sudo -u canvas git checkout prod"
-                ]
+                # Clone Canvas to /var directory with proper ownership handling
+                progress.update(task, description="Preparing Canvas installation...")
                 
-                for cmd in commands:
-                    self.run_command(cmd, "Canvas clone step")
+                # Step 1: Setup Git safe directories and clone as root first
+                setup_cmd = """bash -c "
+                    # Configure Git to handle ownership issues
+                    git config --global --add safe.directory '*' &&
+                    git config --global user.name 'Canvas Installer' &&
+                    git config --global user.email 'installer@canvas.local' &&
+                    
+                    # Clone Canvas to /var
+                    cd /var &&
+                    git clone https://github.com/instructure/canvas-lms.git canvas &&
+                    cd /var/canvas &&
+                    git checkout prod
+                " """
+                
+                self.run_command(setup_cmd, "Cloning Canvas repository", timeout=600)
+                
+                # Step 2: Fix ownership after successful clone
+                progress.update(task, description="Setting up Canvas permissions...")
+                ownership_cmd = """bash -c "
+                    # Set proper ownership for canvas user
+                    chown -R canvas:canvas /var/canvas &&
+                    
+                    # Configure Git for canvas user
+                    sudo -u canvas git config --global --add safe.directory /var/canvas &&
+                    sudo -u canvas git config --global user.name 'Canvas User' &&
+                    sudo -u canvas git config --global user.email 'canvas@localhost' &&
+                    
+                    # Verify we're on the right branch
+                    cd /var/canvas &&
+                    sudo -u canvas git status
+                " """
+                
+                self.run_command(ownership_cmd, "Setting up ownership and permissions")
                 
                 # Copy configuration files
                 progress.update(task, description="Setting up configuration files...")

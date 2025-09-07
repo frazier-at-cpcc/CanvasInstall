@@ -26,17 +26,32 @@ class RCEStep(BaseStep):
         self.log_start()
         
         try:
-            # Clone RCE API
+            # Clone RCE API with proper ownership handling
             self.console.print("[cyan]Cloning Canvas RCE API...[/cyan]")
-            commands = [
-                "cd /var && sudo git clone https://github.com/instructure/canvas-rce-api.git",
-                "sudo chown -R canvas:canvas /var/canvas-rce-api",
-                "cd /var/canvas-rce-api && sudo -u canvas npm install --production",
-                "cd /var/canvas-rce-api && sudo -u canvas npm audit fix --force"
-            ]
             
-            for cmd in commands:
-                self.run_command(cmd, "RCE API setup", timeout=900)
+            # Step 1: Clone RCE repository with Git configuration
+            clone_cmd = '''bash -c "
+                # Configure Git for root user
+                git config --global --add safe.directory '*' &&
+                
+                # Clone RCE API
+                cd /var &&
+                git clone https://github.com/instructure/canvas-rce-api.git &&
+                
+                # Set proper ownership immediately
+                chown -R canvas:canvas /var/canvas-rce-api
+            "'''
+            
+            self.run_command(clone_cmd, "Cloning RCE API repository", timeout=300)
+            
+            # Step 2: Install npm packages as canvas user
+            npm_cmd = '''bash -c "
+                cd /var/canvas-rce-api &&
+                sudo -u canvas npm install --production &&
+                sudo -u canvas npm audit fix --force
+            "'''
+            
+            self.run_command(npm_cmd, "Installing RCE API dependencies", timeout=900)
             
             # Generate secrets
             self.console.print("[cyan]Generating RCE secrets...[/cyan]")

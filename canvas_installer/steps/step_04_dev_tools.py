@@ -54,10 +54,16 @@ class DevToolsStep(BaseStep):
                     self.run_command(cmd, desc)
                     progress.update(task, completed=i+1)
                 
-                # Step 2: Install NVM and Node.js in a single command
+                # Step 2: Install NVM and Node.js with proper permissions
                 progress.update(task, description="Installing NVM and Node.js...", completed=5)
                 nvm_node_cmd = '''bash -c "
+                    # Install NVM
                     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash &&
+                    
+                    # Fix permissions if needed
+                    chmod +x $HOME/.nvm/nvm.sh &&
+                    
+                    # Load NVM and install Node.js
                     export NVM_DIR=\"$HOME/.nvm\" &&
                     [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" &&
                     nvm install 18.20 &&
@@ -68,13 +74,19 @@ class DevToolsStep(BaseStep):
                 self.run_command(nvm_node_cmd, "Installing NVM and Node.js")
                 progress.update(task, completed=6)
                 
-                # Step 3: Install Yarn with Node.js available
+                # Step 3: Install Yarn with Node.js available and clean install
                 progress.update(task, description="Installing Yarn...", completed=6)
                 yarn_cmd = '''bash -c "
+                    # Clean any existing Yarn installation
+                    rm -rf $HOME/.yarn 2>/dev/null || true &&
+                    
+                    # Load NVM and install Yarn
                     export NVM_DIR=\"$HOME/.nvm\" &&
                     [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" &&
                     nvm use 18.20 &&
                     curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.19.1 &&
+                    
+                    # Verify installation
                     export PATH=\"$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH\" &&
                     yarn --version
                 "'''
