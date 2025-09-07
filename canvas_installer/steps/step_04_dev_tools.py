@@ -2,7 +2,12 @@
 Step 4: Install Development Tools
 """
 
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+try:
+    from rich.progress import TaskProgressColumn
+    HAS_TASK_PROGRESS = True
+except ImportError:
+    HAS_TASK_PROGRESS = False
 from .base_step import BaseStep
 
 
@@ -22,32 +27,69 @@ class DevToolsStep(BaseStep):
         self.log_start()
         
         try:
-            with Progress(
+            progress_columns = [
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TaskProgressColumn(),
-                transient=True
-            ) as progress:
+                BarColumn()
+            ]
+            if HAS_TASK_PROGRESS:
+                progress_columns.append(TaskProgressColumn())
+                
+            with Progress(*progress_columns, transient=True) as progress:
                 
                 total_steps = 8
                 task = progress.add_task("Installing development tools...", total=total_steps)
                 
-                steps = [
+                # Step 1: Install basic packages
+                basic_steps = [
                     ("sudo apt-get install -y git-core", "Installing Git"),
                     ("sudo apt-get install -y software-properties-common", "Installing software properties"),
                     ("sudo add-apt-repository -y ppa:instructure/ruby", "Adding Ruby PPA"),
                     ("sudo apt-get update", "Updating package lists"),
-                    ("sudo apt-get install -y ruby3.3 ruby3.3-dev zlib1g-dev libxml2-dev libsqlite3-dev postgresql libpq-dev libxmlsec1-dev libidn11-dev curl make g++", "Installing Ruby and dependencies"),
-                    ("curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash", "Installing NVM"),
-                    ("bash -c 'export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && nvm install 18.20'", "Installing Node.js 18.20"),
-                    ("curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.19.1", "Installing Yarn")
+                    ("sudo apt-get install -y ruby3.3 ruby3.3-dev zlib1g-dev libxml2-dev libsqlite3-dev postgresql libpq-dev libxmlsec1-dev libidn11-dev curl make g++", "Installing Ruby and dependencies")
                 ]
                 
-                for i, (cmd, desc) in enumerate(steps):
+                for i, (cmd, desc) in enumerate(basic_steps):
                     progress.update(task, description=desc, completed=i)
                     self.run_command(cmd, desc)
                     progress.update(task, completed=i+1)
+                
+                # Step 2: Install NVM and Node.js in a single command
+                progress.update(task, description="Installing NVM and Node.js...", completed=5)
+                nvm_node_cmd = '''bash -c "
+                    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash &&
+                    export NVM_DIR=\"$HOME/.nvm\" &&
+                    [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" &&
+                    nvm install 18.20 &&
+                    nvm use 18.20 &&
+                    node --version &&
+                    npm --version
+                "'''
+                self.run_command(nvm_node_cmd, "Installing NVM and Node.js")
+                progress.update(task, completed=6)
+                
+                # Step 3: Install Yarn with Node.js available
+                progress.update(task, description="Installing Yarn...", completed=6)
+                yarn_cmd = '''bash -c "
+                    export NVM_DIR=\"$HOME/.nvm\" &&
+                    [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" &&
+                    nvm use 18.20 &&
+                    curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.19.1 &&
+                    export PATH=\"$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH\" &&
+                    yarn --version
+                "'''
+                self.run_command(yarn_cmd, "Installing Yarn")
+                progress.update(task, completed=7)
+                
+                # Step 4: Create environment setup script
+                progress.update(task, description="Setting up environment...", completed=7)
+                env_setup = '''cat >> ~/.bashrc << 'EOF'
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+EOF'''
+                self.run_command(env_setup, "Setting up environment")
+                progress.update(task, completed=8)
             
             self.log_success()
             return True

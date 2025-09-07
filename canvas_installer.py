@@ -19,7 +19,12 @@ from dataclasses import dataclass, asdict
 try:
     from rich.console import Console
     from rich.panel import Panel
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+    try:
+        from rich.progress import TaskProgressColumn
+        HAS_TASK_PROGRESS = True
+    except ImportError:
+        HAS_TASK_PROGRESS = False
     from rich.prompt import Prompt, Confirm
     from rich.table import Table
     from rich.text import Text
@@ -358,13 +363,15 @@ class CanvasInstaller:
         self.console.print("\n[bold yellow]🛠️  Installing Development Tools...[/bold yellow]")
         
         try:
-            with Progress(
+            progress_columns = [
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TaskProgressColumn(),
-                transient=True
-            ) as progress:
+                BarColumn()
+            ]
+            if HAS_TASK_PROGRESS:
+                progress_columns.append(TaskProgressColumn())
+                
+            with Progress(*progress_columns, transient=True) as progress:
                 
                 total_steps = 8
                 task = progress.add_task("Installing development tools...", total=total_steps)

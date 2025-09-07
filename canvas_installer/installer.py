@@ -16,13 +16,41 @@ try:
     from rich.prompt import Prompt, Confirm
     from rich import box
 except ImportError:
-    print("Installing required dependencies...")
+    print("Rich library not found. Installing required dependencies...")
     import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "rich"])
-    from rich.console import Console
-    from rich.panel import Panel
-    from rich.prompt import Prompt, Confirm
-    from rich import box
+    
+    # Try pip first, then fallback to apt
+    try:
+        print("Attempting to install via pip...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "rich"])
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("Pip not available. Installing via apt...")
+        try:
+            subprocess.check_call(["apt", "update"])
+            subprocess.check_call(["apt", "install", "-y", "python3-pip"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "rich"])
+        except subprocess.CalledProcessError:
+            print("Failed to install via pip. Trying apt package...")
+            try:
+                subprocess.check_call(["apt", "install", "-y", "python3-rich"])
+            except subprocess.CalledProcessError:
+                print("ERROR: Could not install Rich library.")
+                print("Please install manually with one of these commands:")
+                print("  sudo apt update && sudo apt install -y python3-pip && pip3 install rich")
+                print("  sudo apt install -y python3-rich")
+                sys.exit(1)
+    
+    # Import again after installation
+    try:
+        from rich.console import Console
+        from rich.panel import Panel
+        from rich.prompt import Prompt, Confirm
+        from rich import box
+    except ImportError:
+        print("ERROR: Rich library installation failed. Please install manually:")
+        print("  sudo apt update && sudo apt install -y python3-pip && pip3 install rich")
+        print("  or: sudo apt install -y python3-rich")
+        sys.exit(1)
 
 from .config import InstallationConfig
 from .steps import (

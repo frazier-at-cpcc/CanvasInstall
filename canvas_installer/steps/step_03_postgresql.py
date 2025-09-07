@@ -4,6 +4,11 @@ Step 3: PostgreSQL Installation and Setup
 
 import os
 from rich.progress import Progress, SpinnerColumn, TextColumn
+try:
+    from rich.progress import TaskProgressColumn
+    HAS_TASK_PROGRESS = True
+except ImportError:
+    HAS_TASK_PROGRESS = False
 from .base_step import BaseStep
 
 

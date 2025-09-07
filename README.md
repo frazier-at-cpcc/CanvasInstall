@@ -4,6 +4,18 @@ A comprehensive, guided installer for Canvas LMS with a beautiful TUI (Text User
 
 ![Canvas LMS Installer](https://img.shields.io/badge/Canvas-LMS-blue) ![Ubuntu 22.04](https://img.shields.io/badge/Ubuntu-22.04-orange) ![Python 3](https://img.shields.io/badge/Python-3.8+-green)
 
+## ⚠️ IMPORTANT: Run the Correct File
+
+**✅ Use this command:**
+```bash
+sudo python3 install_canvas.py
+```
+
+**❌ Do NOT use:**
+```bash
+sudo python3 canvas_installer.py  # This is the legacy version
+```
+
 ## ✨ Features
 
 - **Interactive TUI Interface**: Beautiful terminal interface with progress tracking
@@ -43,7 +55,7 @@ Before running the installer, ensure you have:
 
 1. **Download the installer**:
    ```bash
-   git clone https://github.com/frazier-at-cpcc/CanvasInstall.git
+   git clone <repository-url>
    cd CanvasInstall
    ```
 
@@ -56,8 +68,25 @@ Before running the installer, ensure you have:
    ```bash
    sudo python3 install_canvas.py
    ```
+   
+   The installer will automatically handle dependency installation (Rich library) if not present.
 
 4. **Follow the interactive prompts** to configure your Canvas installation.
+
+### Dependencies Installation
+
+The installer automatically handles the installation of required dependencies (Rich library for the TUI). It will try multiple methods:
+
+1. **Automatic Installation**: Updates packages and installs pip, then installs Rich
+2. **Fallback Method**: Uses apt package `python3-rich` if pip fails
+3. **Manual Installation**: Provides clear instructions if automatic methods fail
+
+If you encounter dependency issues, you can manually install Rich before running:
+```bash
+sudo apt update && sudo apt install -y python3-pip && pip3 install rich
+# OR
+sudo apt install -y python3-rich
+```
 
 ## 📁 Project Structure
 

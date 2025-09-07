@@ -2,7 +2,12 @@
 Step 7: Install Dependencies and Compile Assets
 """
 
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+try:
+    from rich.progress import TaskProgressColumn
+    HAS_TASK_PROGRESS = True
+except ImportError:
+    HAS_TASK_PROGRESS = False
 from .base_step import BaseStep
 
 
@@ -22,13 +27,15 @@ class DependenciesStep(BaseStep):
         self.log_start()
         
         try:
-            with Progress(
+            progress_columns = [
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TaskProgressColumn(),
-                transient=True
-            ) as progress:
+                BarColumn()
+            ]
+            if HAS_TASK_PROGRESS:
+                progress_columns.append(TaskProgressColumn())
+                
+            with Progress(*progress_columns, transient=True) as progress:
                 
                 total_steps = 12
                 task = progress.add_task("Installing dependencies...", total=total_steps)
