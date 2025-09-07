@@ -55,7 +55,7 @@ Before running the installer, ensure you have:
 
 1. **Download the installer**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/frazier-at-cpcc/CanvasInstall.git
    cd CanvasInstall
    ```
 
